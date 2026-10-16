@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
 
 from ..db import LIBRARY_DIR, connect
+from ..pdf import PdfError, extract_pdf_pages
 
 router = APIRouter(prefix="/api")
 
@@ -21,7 +22,7 @@ def _natural_key(name: str):
 
 
 def _collect_images(uploads: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]:
-    """Expand .cbz/.zip archives and keep only image files, in natural filename order."""
+    """Expand .cbz/.zip archives and .pdf files into page images, in natural filename order."""
     images: list[tuple[str, bytes]] = []
     for name, data in uploads:
         ext = Path(name).suffix.lower()
@@ -37,6 +38,11 @@ def _collect_images(uploads: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]
                         images.append((info.filename, zf.read(info)))
             except zipfile.BadZipFile:
                 raise HTTPException(400, f"{name} is not a valid archive")
+        elif ext == ".pdf":
+            try:
+                images.extend(extract_pdf_pages(data, Path(name).stem))
+            except PdfError as e:
+                raise HTTPException(400, f"{name}: {e}")
         elif ext in IMAGE_EXTS:
             images.append((name, data))
     images.sort(key=lambda it: _natural_key(it[0]))

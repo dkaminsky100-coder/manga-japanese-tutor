@@ -44,7 +44,7 @@ export default function Library() {
       <h1>Manga Reader</h1>
       <form onSubmit={onUpload} className="upload">
         <input placeholder="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <input ref={fileInput} type="file" multiple accept="image/*,.cbz,.zip" required />
+        <input ref={fileInput} type="file" multiple accept="image/*,.cbz,.zip,.pdf" required />
         <button disabled={busy}>{busy ? 'Uploading…' : 'Upload chapter'}</button>
       </form>
       {error && <p className="error">{error}</p>}
@@ -56,7 +56,7 @@ export default function Library() {
             <button onClick={() => onDelete(c.id)}>Delete</button>
           </li>
         ))}
-        {!chapters.length && <li className="empty">No chapters yet — upload images or a .cbz file.</li>}
+        {!chapters.length && <li className="empty">No chapters yet — upload images, a .cbz or a PDF.</li>}
       </ul>
     </main>
   )
