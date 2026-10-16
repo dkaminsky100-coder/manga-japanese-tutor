@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getAnalysis, pageImageUrl, type PageAnalysis, type PageInfo } from '../api/client'
 import { bboxToPercent } from '../lib/coords'
+import Bubble from './Bubble'
 
 const POLL_MS = 1000
 
@@ -16,9 +17,7 @@ export default function PageView({ page, showBoxes }: Props) {
   useEffect(() => {
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
-    setAnalysis(null)
-    setFetchError(null)
-
+    // No state reset needed: Reader mounts PageView with key={page.id}, so each page starts fresh.
     const poll = async () => {
       try {
         const a = await getAnalysis(page.id)
@@ -56,16 +55,7 @@ export default function PageView({ page, showBoxes }: Props) {
         <img src={pageImageUrl(page.id)} width={page.width} height={page.height} alt="" draggable={false} />
         {analysis?.blocks.map((b, i) => {
           const r = bboxToPercent(b.bbox, page.width, page.height)
-          return (
-            <div
-              key={b.id}
-              className={`block-box${showBoxes ? ' debug' : ''}`}
-              style={{ left: `${r.left}%`, top: `${r.top}%`, width: `${r.width}%`, height: `${r.height}%` }}
-              title={b.text}
-            >
-              {showBoxes && <span className="block-label">{i + 1}</span>}
-            </div>
-          )
+          return <Bubble key={b.id} block={b} rect={r} label={showBoxes ? i + 1 : null} />
         })}
       </div>
       {showBoxes && analysis?.status === 'done' && (
