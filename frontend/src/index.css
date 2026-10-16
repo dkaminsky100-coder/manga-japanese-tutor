@@ -57,3 +57,11 @@ body { margin: 0; }
 .step-text { font-size: .95rem; }
 .step-note { color: #888; }
 .particle-note { margin: .1rem 0 .2rem; font-size: .8rem; font-style: italic; color: #888; }
+.edit-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .6rem; margin: -.2rem 0 .3rem; font-size: .75rem; }
+.link-btn { background: none; border: none; padding: 0; color: #38f; cursor: pointer; font-size: inherit; text-decoration: underline; }
+.link-btn:disabled { color: #888; cursor: default; }
+.badge.edited { color: #c80; border-color: #c806; margin-left: 0; }
+.ocr-original { color: #888; }
+.editor textarea { box-sizing: border-box; width: 100%; min-width: 16rem; font: inherit; font-size: 1.1rem; padding: .3rem; resize: vertical; }
+.editor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .3rem; }
+.editor-hint { font-size: .68rem; color: #888; }

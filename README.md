@@ -60,6 +60,14 @@ cd backend  && .venv\Scripts\python -m uvicorn app.main:app --port 8000
 cd frontend && npm run dev          # open http://localhost:5173
 ```
 
+## Correcting OCR mistakes
+
+Hover a bubble and click **Edit text**, fix the text, then **Save** (or Ctrl+Enter; plain Enter is left
+for confirming Japanese input). The furigana, dictionary, grammar and translation update immediately.
+Corrected bubbles show an *edited* badge, what the OCR originally read, and a **Reset to OCR** button.
+Corrections are kept when a page is read again after a pipeline change (matched to the new boxes by
+position; if the bubble is no longer detected the corrected block is kept as it was).
+
 ## Tests
 
 ```

@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from .. import db
 from ..nlp import translate as translator
@@ -54,3 +55,30 @@ def translate_block(block_id: int):
             (text, result, translator.MODEL_NAME),
         )
     return {"translation": result, "model": translator.MODEL_NAME, "cached": False}
+
+
+class BlockEdit(BaseModel):
+    text: str
+
+
+@router.patch("/blocks/{block_id}")
+def edit_block(block_id: int, body: BlockEdit):
+    """Correct a block's text. Returns the block re-analysed (tokens, dictionary, grammar)."""
+    text = runner.clean_text(body.text)
+    if not text:
+        raise HTTPException(400, "Text cannot be empty")
+    if len(text) > runner.MAX_TEXT_CHARS:
+        raise HTTPException(400, f"Text is too long (max {runner.MAX_TEXT_CHARS} characters)")
+    block = runner.edit_block(block_id, text)
+    if block is None:
+        raise HTTPException(404, "Block not found")
+    return block
+
+
+@router.post("/blocks/{block_id}/revert")
+def revert_block(block_id: int):
+    """Undo a correction and show the OCR text again."""
+    block = runner.revert_block(block_id)
+    if block is None:
+        raise HTTPException(404, "Block not found")
+    return block

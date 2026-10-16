@@ -37,7 +37,9 @@ CREATE TABLE IF NOT EXISTS blocks (
     x1 INTEGER NOT NULL, y1 INTEGER NOT NULL, x2 INTEGER NOT NULL, y2 INTEGER NOT NULL,
     vertical INTEGER NOT NULL,
     conf REAL NOT NULL,
-    text TEXT NOT NULL,
+    text TEXT NOT NULL,          -- shown text: the OCR text, or the user's correction
+    ocr_text TEXT,               -- what the OCR read (NULL only on rows from before corrections)
+    edited INTEGER NOT NULL DEFAULT 0,
     UNIQUE (page_id, idx)
 );
 CREATE TABLE IF NOT EXISTS translations (
@@ -56,6 +58,11 @@ def init_db() -> None:
         cols = {r["name"] for r in conn.execute("PRAGMA table_info(page_analysis)")}
         if "version" not in cols:
             conn.execute("ALTER TABLE page_analysis ADD COLUMN version INTEGER NOT NULL DEFAULT 0")
+        block_cols = {r["name"] for r in conn.execute("PRAGMA table_info(blocks)")}
+        if "ocr_text" not in block_cols:
+            conn.execute("ALTER TABLE blocks ADD COLUMN ocr_text TEXT")
+            conn.execute("ALTER TABLE blocks ADD COLUMN edited INTEGER NOT NULL DEFAULT 0")
+            conn.execute("UPDATE blocks SET ocr_text = text")
 
 
 @contextmanager

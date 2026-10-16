@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getAnalysis, pageImageUrl, type PageAnalysis, type PageInfo } from '../api/client'
+import { getAnalysis, pageImageUrl, type PageAnalysis, type PageInfo, type TextBlock } from '../api/client'
 import { bboxToPercent } from '../lib/coords'
 import Bubble from './Bubble'
 
@@ -38,6 +38,10 @@ export default function PageView({ page, showBoxes }: Props) {
     }
   }, [page.id])
 
+  /** Swap in a block the user just corrected (or reset) without refetching the page. */
+  const replaceBlock = (updated: TextBlock) =>
+    setAnalysis((a) => a && { ...a, blocks: a.blocks.map((b) => (b.id === updated.id ? updated : b)) })
+
   const status =
     fetchError ??
     (analysis?.status === 'error'
@@ -55,7 +59,7 @@ export default function PageView({ page, showBoxes }: Props) {
         <img src={pageImageUrl(page.id)} width={page.width} height={page.height} alt="" draggable={false} />
         {analysis?.blocks.map((b, i) => {
           const r = bboxToPercent(b.bbox, page.width, page.height)
-          return <Bubble key={b.id} block={b} rect={r} label={showBoxes ? i + 1 : null} />
+          return <Bubble key={b.id} block={b} rect={r} label={showBoxes ? i + 1 : null} onChange={replaceBlock} />
         })}
       </div>
       {showBoxes && analysis?.status === 'done' && (

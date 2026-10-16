@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getChapter, type Chapter } from '../api/client'
 import PageView from '../components/PageView'
+import { isTypingTarget } from '../lib/keys'
 
 export default function Reader() {
   const id = Number(useParams().chapterId)
@@ -21,6 +22,7 @@ export default function Reader() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return // arrow keys move the caret while typing a correction
       if (e.key === 'ArrowLeft') next()
       else if (e.key === 'ArrowRight') prev()
     }

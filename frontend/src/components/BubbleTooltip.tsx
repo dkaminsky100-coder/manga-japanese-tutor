@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { Compound, DictEntry, GrammarUnit, TextBlock, TranslationState, WordToken } from '../api/client'
 import Ruby from './Ruby'
 
@@ -163,23 +164,116 @@ function Translate({ state, onTranslate }: { state: TranslationState; onTranslat
   }
 }
 
+/** Everything the tooltip needs to let the user correct the block's text. */
+export interface EditorProps {
+  editing: boolean
+  saving: boolean
+  error: string | null
+  onStart: () => void
+  onCancel: () => void
+  onSave: (text: string) => void
+  onRevert: () => void
+}
+
+const hasText = (s: string) => s.replace(/\s+/g, '') !== ''
+
+function TextEditor({ block, editor }: { block: TextBlock; editor: EditorProps }) {
+  const [draft, setDraft] = useState(block.text)
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.focus()
+    el.setSelectionRange(el.value.length, el.value.length)
+  }, [])
+
+  const canSave = hasText(draft) && !editor.saving
+  const save = () => canSave && editor.onSave(draft)
+
+  return (
+    <div className="editor">
+      <textarea
+        ref={ref}
+        lang="ja"
+        rows={2}
+        value={draft}
+        disabled={editor.saving}
+        aria-label="Corrected text"
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing) return // Enter / Esc belong to the Japanese input method here
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            e.stopPropagation()
+            editor.onCancel()
+          } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault()
+            save()
+          }
+        }}
+      />
+      <div className="editor-actions">
+        <button type="button" onClick={save} disabled={!canSave}>
+          {editor.saving ? 'Saving…' : 'Save'}
+        </button>
+        <button type="button" onClick={editor.onCancel} disabled={editor.saving}>
+          Cancel
+        </button>
+        <span className="editor-hint">Ctrl+Enter to save · Esc to cancel</span>
+      </div>
+      {editor.error && <p className="translation-status error">{editor.error}</p>}
+    </div>
+  )
+}
+
+function EditControls({ block, editor }: { block: TextBlock; editor: EditorProps }) {
+  return (
+    <div className="edit-controls">
+      <button type="button" className="link-btn" onClick={editor.onStart}>
+        Edit text
+      </button>
+      {block.edited && (
+        <>
+          <span className="badge edited">edited</span>
+          <button type="button" className="link-btn" onClick={editor.onRevert} disabled={editor.saving}>
+            Reset to OCR
+          </button>
+          <span className="ocr-original" lang="ja">
+            OCR read: {block.ocr_text}
+          </span>
+        </>
+      )}
+      {editor.error && <span className="translation-status error">{editor.error}</span>}
+    </div>
+  )
+}
+
 interface Props {
   block: TextBlock
   pinned: boolean
   translation: TranslationState
   onTranslate: () => void
+  editor: EditorProps
 }
 
 /** Tooltip body: the sentence with furigana, a translation on demand, phrases, then a word-by-word breakdown. */
-export default function BubbleTooltip({ block, pinned, translation, onTranslate }: Props) {
+export default function BubbleTooltip({ block, pinned, translation, onTranslate, editor }: Props) {
   const words = block.tokens.filter((t) => t.pos_label !== 'symbol' && t.pos_label !== 'space')
   return (
     <div className="tooltip" role="tooltip">
-      <p className="tooltip-text" lang="ja">
-        {block.tokens.length > 0
-          ? block.tokens.map((t, i) => <Ruby key={i} segments={t.ruby} />)
-          : block.text}
-      </p>
+      {editor.editing ? (
+        <TextEditor block={block} editor={editor} />
+      ) : (
+        <>
+          <p className="tooltip-text" lang="ja">
+            {block.tokens.length > 0
+              ? block.tokens.map((t, i) => <Ruby key={i} segments={t.ruby} />)
+              : block.text}
+          </p>
+          <EditControls block={block} editor={editor} />
+        </>
+      )}
       <Translate state={translation} onTranslate={onTranslate} />
       <Grammar units={block.grammar} tokens={block.tokens} />
       <Phrases compounds={block.compounds} />

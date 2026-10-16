@@ -120,6 +120,9 @@ export interface TextBlock {
   tokens: WordToken[]
   compounds: Compound[]
   grammar: GrammarUnit[]
+  /** What the OCR read; `text` differs from it once the user has corrected the block */
+  ocr_text: string
+  edited: boolean
 }
 
 export interface PageAnalysis {
@@ -164,3 +167,15 @@ export type TranslationState =
   | { status: 'loading' }
   | { status: 'done'; text: string }
   | { status: 'error'; message: string }
+
+/** Correct a block's text. Returns the block re-analysed for the new text. */
+export const editBlock = (blockId: number, text: string) =>
+  fetch(`/api/blocks/${blockId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  }).then(json<TextBlock>)
+
+/** Undo a correction: the OCR text is shown again. */
+export const revertBlock = (blockId: number) =>
+  fetch(`/api/blocks/${blockId}/revert`, { method: 'POST' }).then(json<TextBlock>)

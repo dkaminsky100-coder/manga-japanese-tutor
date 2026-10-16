@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { DictEntry, TextBlock, TranslationState, WordToken } from '../api/client'
-import BubbleTooltip from './BubbleTooltip'
+import BubbleTooltip, { type EditorProps } from './BubbleTooltip'
 
 const entry = (id: number, kanji: string[], kana: string[], glosses: string[], pos = ['Ichidan verb']): DictEntry => ({
   id, common: id === 1, kanji, kana, more_senses: 0, senses: [{ pos, glosses, misc: [] }],
@@ -26,15 +27,19 @@ const unknown: WordToken = { ...taberu, surface: 'キョロ', pos_label: 'noun',
 
 const block = (tokens: WordToken[], compounds: TextBlock['compounds'] = [], grammar: TextBlock['grammar'] = []): TextBlock => ({
   id: 1, bbox: [0, 0, 1, 1], vertical: true, conf: 1, text: tokens.map((t) => t.surface).join(''), tokens, compounds, grammar,
+  ocr_text: tokens.map((t) => t.surface).join(''), edited: false,
 })
 
 const idle: TranslationState = { status: 'idle' }
+const noEditor: EditorProps = {
+  editing: false, saving: false, error: null, onStart() {}, onCancel() {}, onSave() {}, onRevert() {},
+}
 
 afterEach(cleanup)
 
 describe('BubbleTooltip', () => {
   it('renders furigana as <ruby> over kanji only', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     const ruby = container.querySelector('.tooltip-text ruby')!
     expect(ruby.textContent).toContain('食')
     expect(ruby.querySelector('rt')!.textContent).toBe('た')
@@ -42,7 +47,7 @@ describe('BubbleTooltip', () => {
   })
 
   it('lists each word with its part of speech, base form, inflection and definition', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     const word = container.querySelector('li.word') as HTMLElement
     expect(within(word).getByText('verb')).toBeTruthy()
     expect(within(word).getByText('← 食べる')).toBeTruthy()
@@ -52,33 +57,33 @@ describe('BubbleTooltip', () => {
   })
 
   it('tucks additional dictionary entries into a collapsed section', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     const details = container.querySelector('details.other-entries')!
     expect(details.querySelector('summary')!.textContent).toBe('1 other entry')
     expect(details.hasAttribute('open')).toBe(false)
   })
 
   it('skips punctuation in the word list but keeps it in the sentence', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu, bang])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    const { container } = render(<BubbleTooltip block={block([taberu, bang])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     expect(container.querySelectorAll('li.word')).toHaveLength(1)
     expect(container.querySelector('.tooltip-text')!.textContent).toContain('！')
   })
 
   it('says so when a word has no dictionary entry', () => {
-    render(<BubbleTooltip block={block([unknown])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    render(<BubbleTooltip block={block([unknown])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     expect(screen.getByText('No dictionary entry found.')).toBeTruthy()
   })
 
   it('shows phrases when compounds were found', () => {
     const phrase = { start: 0, end: 3, text: '気をつける', entries: [entry(9, ['気をつける'], ['きをつける'], ['to be careful'], ['Expression'])] }
-    render(<BubbleTooltip block={block([taberu], [phrase])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    render(<BubbleTooltip block={block([taberu], [phrase])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     expect(screen.getByText('Phrases')).toBeTruthy()
     expect(screen.getByText('気をつける')).toBeTruthy()
   })
 
   it('falls back to the raw OCR text when there are no tokens', () => {
     const b = { ...block([]), text: 'こんにちは' }
-    render(<BubbleTooltip block={b} pinned translation={idle} onTranslate={() => {}} />)
+    render(<BubbleTooltip block={b} pinned translation={idle} onTranslate={() => {}} editor={noEditor} />)
     expect(screen.getByText('こんにちは')).toBeTruthy()
     expect(screen.getByText(/Pinned/)).toBeTruthy()
   })
@@ -93,7 +98,7 @@ describe('BubbleTooltip', () => {
         { text: 'た', label: 'past', note: 'past or completed (〜た)' },
       ],
     }
-    const { container } = render(<BubbleTooltip block={block([taberu, ta], [], [unit])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    const { container } = render(<BubbleTooltip block={block([taberu, ta], [], [unit])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     const g = container.querySelector('section.grammar') as HTMLElement
     expect(within(g).getByText('Grammar')).toBeTruthy()
     expect(g.querySelector('.unit-summary')!.textContent).toBe('past')
@@ -103,7 +108,7 @@ describe('BubbleTooltip', () => {
   })
 
   it('omits the Grammar section when there are no chains', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     expect(container.querySelector('section.grammar')).toBeNull()
   })
 
@@ -111,8 +116,97 @@ describe('BubbleTooltip', () => {
     const wa: WordToken = { ...taberu, surface: 'は', dictionary_form: 'は', pos: '助詞', pos_label: 'particle', conj_label: '',
       verb_class: '', particle_kind: 'topic / focus particle', note: 'marks the topic of the sentence',
       ruby: [{ text: 'は', ruby: null }], entries: [] }
-    render(<BubbleTooltip block={block([wa])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    render(<BubbleTooltip block={block([wa])} pinned={false} translation={idle} onTranslate={() => {}} editor={noEditor} />)
     expect(screen.getByText('topic / focus particle')).toBeTruthy()
     expect(screen.getByText('marks the topic of the sentence')).toBeTruthy()
+  })
+
+  describe('correcting the text', () => {
+    const renderTooltip = (b: TextBlock, editor: Partial<EditorProps> = {}) => {
+      const e = { ...noEditor, onStart: vi.fn(), onCancel: vi.fn(), onSave: vi.fn(), onRevert: vi.fn(), ...editor }
+      render(<BubbleTooltip block={b} pinned={false} translation={idle} onTranslate={() => {}} editor={e} />)
+      return e
+    }
+
+    it('offers an Edit button on an unedited block, without edited markers', () => {
+      const e = renderTooltip(block([taberu]))
+      fireEvent.click(screen.getByRole('button', { name: 'Edit text' }))
+      expect(e.onStart).toHaveBeenCalledOnce()
+      expect(screen.queryByText('edited')).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Reset to OCR' })).toBeNull()
+    })
+
+    it('marks an edited block, shows what the OCR read, and can reset it', () => {
+      const e = renderTooltip({ ...block([taberu]), ocr_text: 'たべた', edited: true })
+      expect(screen.getByText('edited')).toBeTruthy()
+      expect(screen.getByText('OCR read: たべた')).toBeTruthy()
+      fireEvent.click(screen.getByRole('button', { name: 'Reset to OCR' }))
+      expect(e.onRevert).toHaveBeenCalledOnce()
+    })
+
+    it('replaces the sentence with a textarea holding the current text while editing', () => {
+      const { container } = render(
+        <BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} editor={{ ...noEditor, editing: true }} />,
+      )
+      expect((screen.getByLabelText('Corrected text') as HTMLTextAreaElement).value).toBe('食べ')
+      expect(container.querySelector('.tooltip-text')).toBeNull()
+      expect(document.activeElement).toBe(screen.getByLabelText('Corrected text'))
+    })
+
+    it('saves the typed text with the Save button', async () => {
+      const user = userEvent.setup()
+      const e = renderTooltip(block([taberu]), { editing: true })
+      const box = screen.getByLabelText('Corrected text')
+      await user.clear(box)
+      await user.type(box, '食べた')
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+      expect(e.onSave).toHaveBeenCalledWith('食べた')
+    })
+
+    it('saves with Ctrl+Enter, but not with plain Enter (which confirms Japanese input)', async () => {
+      const user = userEvent.setup()
+      const e = renderTooltip(block([taberu]), { editing: true })
+      const box = screen.getByLabelText('Corrected text')
+      await user.type(box, 'x{Enter}')
+      expect(e.onSave).not.toHaveBeenCalled()
+      await user.keyboard('{Control>}{Enter}{/Control}')
+      expect(e.onSave).toHaveBeenCalledOnce()
+    })
+
+    it('ignores Ctrl+Enter and Escape while an input method is composing', () => {
+      const e = renderTooltip(block([taberu]), { editing: true })
+      const box = screen.getByLabelText('Corrected text')
+      fireEvent.keyDown(box, { key: 'Enter', ctrlKey: true, isComposing: true })
+      fireEvent.keyDown(box, { key: 'Escape', isComposing: true })
+      expect(e.onSave).not.toHaveBeenCalled()
+      expect(e.onCancel).not.toHaveBeenCalled()
+    })
+
+    it('cancels with Escape and with the Cancel button', async () => {
+      const user = userEvent.setup()
+      const e = renderTooltip(block([taberu]), { editing: true })
+      await user.keyboard('{Escape}')
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(e.onCancel).toHaveBeenCalledTimes(2)
+    })
+
+    it('cannot save blank text, nor while a save is in flight', async () => {
+      const user = userEvent.setup()
+      const e = renderTooltip(block([taberu]), { editing: true })
+      await user.clear(screen.getByLabelText('Corrected text'))
+      await user.type(screen.getByLabelText('Corrected text'), '  ')
+      expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true)
+      await user.keyboard('{Control>}{Enter}{/Control}')
+      expect(e.onSave).not.toHaveBeenCalled()
+      cleanup()
+      renderTooltip(block([taberu]), { editing: true, saving: true })
+      expect((screen.getByRole('button', { name: 'Saving…' }) as HTMLButtonElement).disabled).toBe(true)
+      expect((screen.getByLabelText('Corrected text') as HTMLTextAreaElement).disabled).toBe(true)
+    })
+
+    it('shows a save error', () => {
+      renderTooltip(block([taberu]), { editing: true, error: 'Text cannot be empty' })
+      expect(screen.getByText('Text cannot be empty')).toBeTruthy()
+    })
   })
 })
