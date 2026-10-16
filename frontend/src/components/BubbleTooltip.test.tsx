@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { DictEntry, TextBlock, WordToken } from '../api/client'
+import type { DictEntry, TextBlock, TranslationState, WordToken } from '../api/client'
 import BubbleTooltip from './BubbleTooltip'
 
 const entry = (id: number, kanji: string[], kana: string[], glosses: string[], pos = ['Ichidan verb']): DictEntry => ({
@@ -26,11 +26,13 @@ const block = (tokens: WordToken[], compounds: TextBlock['compounds'] = []): Tex
   id: 1, bbox: [0, 0, 1, 1], vertical: true, conf: 1, text: tokens.map((t) => t.surface).join(''), tokens, compounds,
 })
 
+const idle: TranslationState = { status: 'idle' }
+
 afterEach(cleanup)
 
 describe('BubbleTooltip', () => {
   it('renders furigana as <ruby> over kanji only', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} />)
+    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} />)
     const ruby = container.querySelector('.tooltip-text ruby')!
     expect(ruby.textContent).toContain('食')
     expect(ruby.querySelector('rt')!.textContent).toBe('た')
@@ -38,7 +40,7 @@ describe('BubbleTooltip', () => {
   })
 
   it('lists each word with its part of speech, base form, inflection and definition', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} />)
+    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} />)
     const word = container.querySelector('li.word') as HTMLElement
     expect(within(word).getByText('verb')).toBeTruthy()
     expect(within(word).getByText('← 食べる')).toBeTruthy()
@@ -47,33 +49,33 @@ describe('BubbleTooltip', () => {
   })
 
   it('tucks additional dictionary entries into a collapsed section', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} />)
+    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} />)
     const details = container.querySelector('details.other-entries')!
     expect(details.querySelector('summary')!.textContent).toBe('1 other entry')
     expect(details.hasAttribute('open')).toBe(false)
   })
 
   it('skips punctuation in the word list but keeps it in the sentence', () => {
-    const { container } = render(<BubbleTooltip block={block([taberu, bang])} pinned={false} />)
+    const { container } = render(<BubbleTooltip block={block([taberu, bang])} pinned={false} translation={idle} onTranslate={() => {}} />)
     expect(container.querySelectorAll('li.word')).toHaveLength(1)
     expect(container.querySelector('.tooltip-text')!.textContent).toContain('！')
   })
 
   it('says so when a word has no dictionary entry', () => {
-    render(<BubbleTooltip block={block([unknown])} pinned={false} />)
+    render(<BubbleTooltip block={block([unknown])} pinned={false} translation={idle} onTranslate={() => {}} />)
     expect(screen.getByText('No dictionary entry found.')).toBeTruthy()
   })
 
   it('shows phrases when compounds were found', () => {
     const phrase = { start: 0, end: 3, text: '気をつける', entries: [entry(9, ['気をつける'], ['きをつける'], ['to be careful'], ['Expression'])] }
-    render(<BubbleTooltip block={block([taberu], [phrase])} pinned={false} />)
+    render(<BubbleTooltip block={block([taberu], [phrase])} pinned={false} translation={idle} onTranslate={() => {}} />)
     expect(screen.getByText('Phrases')).toBeTruthy()
     expect(screen.getByText('気をつける')).toBeTruthy()
   })
 
   it('falls back to the raw OCR text when there are no tokens', () => {
     const b = { ...block([]), text: 'こんにちは' }
-    render(<BubbleTooltip block={b} pinned />)
+    render(<BubbleTooltip block={b} pinned translation={idle} onTranslate={() => {}} />)
     expect(screen.getByText('こんにちは')).toBeTruthy()
     expect(screen.getByText(/Pinned/)).toBeTruthy()
   })

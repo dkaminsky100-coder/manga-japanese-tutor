@@ -39,6 +39,11 @@ CREATE TABLE IF NOT EXISTS blocks (
     text TEXT NOT NULL,
     UNIQUE (page_id, idx)
 );
+CREATE TABLE IF NOT EXISTS translations (
+    text TEXT PRIMARY KEY,
+    translation TEXT NOT NULL,
+    model TEXT NOT NULL
+);
 """
 
 

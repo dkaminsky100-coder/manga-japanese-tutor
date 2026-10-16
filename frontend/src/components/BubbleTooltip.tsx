@@ -1,4 +1,4 @@
-import type { Compound, DictEntry, TextBlock, WordToken } from '../api/client'
+import type { Compound, DictEntry, TextBlock, TranslationState, WordToken } from '../api/client'
 import Ruby from './Ruby'
 
 const MAX_SENSES_SHOWN = 3
@@ -100,8 +100,44 @@ function Phrases({ compounds }: { compounds: Compound[] }) {
   )
 }
 
-/** Tooltip body: the sentence with furigana, phrases, then a word-by-word breakdown. */
-export default function BubbleTooltip({ block, pinned }: { block: TextBlock; pinned: boolean }) {
+function Translate({ state, onTranslate }: { state: TranslationState; onTranslate: () => void }) {
+  switch (state.status) {
+    case 'idle':
+      return (
+        <button type="button" className="translate-btn" onClick={onTranslate}>
+          Translate
+        </button>
+      )
+    case 'loading':
+      return <p className="translation-status">Translating…</p>
+    case 'error':
+      return (
+        <p className="translation-status error">
+          {state.message}{' '}
+          <button type="button" className="translate-btn" onClick={onTranslate}>
+            Try again
+          </button>
+        </p>
+      )
+    case 'done':
+      return (
+        <div className="translation">
+          <p className="translation-text">{state.text || '(no translation)'}</p>
+          <p className="translation-note">Rough machine translation · may be wrong, especially for slang</p>
+        </div>
+      )
+  }
+}
+
+interface Props {
+  block: TextBlock
+  pinned: boolean
+  translation: TranslationState
+  onTranslate: () => void
+}
+
+/** Tooltip body: the sentence with furigana, a translation on demand, phrases, then a word-by-word breakdown. */
+export default function BubbleTooltip({ block, pinned, translation, onTranslate }: Props) {
   const words = block.tokens.filter((t) => t.pos_label !== 'symbol' && t.pos_label !== 'space')
   return (
     <div className="tooltip" role="tooltip">
@@ -110,6 +146,7 @@ export default function BubbleTooltip({ block, pinned }: { block: TextBlock; pin
           ? block.tokens.map((t, i) => <Ruby key={i} segments={t.ruby} />)
           : block.text}
       </p>
+      <Translate state={translation} onTranslate={onTranslate} />
       <Phrases compounds={block.compounds} />
       {words.length > 0 && (
         <ul className="words">

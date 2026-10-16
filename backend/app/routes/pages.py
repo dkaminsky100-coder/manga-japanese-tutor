@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from .. import db
+from ..nlp import translate as translator
 from ..pipeline import runner
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 PREFETCH_AHEAD = 2
@@ -24,3 +28,29 @@ def page_analysis(page_id: int):
     for r in nxt:
         runner.enqueue(r["id"])
     return runner.get_analysis(page_id)
+
+
+@router.post("/blocks/{block_id}/translate")
+def translate_block(block_id: int):
+    """Rough local machine translation of a block's text, cached by text."""
+    with db.connect() as conn:
+        row = conn.execute("SELECT text FROM blocks WHERE id = ?", (block_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Block not found")
+        text = row["text"]
+        cached = conn.execute("SELECT translation, model FROM translations WHERE text = ?", (text,)).fetchone()
+    if cached:
+        return {"translation": cached["translation"], "model": cached["model"], "cached": True}
+
+    try:
+        result = translator.translate(text)
+    except Exception as e:  # noqa: BLE001 - model missing / download failed / out of memory
+        log.exception("translation failed for block %s", block_id)
+        raise HTTPException(503, f"Translation model unavailable: {e}")
+
+    with db.connect() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO translations (text, translation, model) VALUES (?,?,?)",
+            (text, result, translator.MODEL_NAME),
+        )
+    return {"translation": result, "model": translator.MODEL_NAME, "cached": False}

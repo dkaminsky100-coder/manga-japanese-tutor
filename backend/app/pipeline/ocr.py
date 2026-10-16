@@ -4,6 +4,7 @@ from __future__ import annotations
 import numpy as np
 from PIL import Image
 
+from ..model_lock import LOAD_LOCK
 from .detect import TextBlock
 
 _mocr = None
@@ -12,15 +13,17 @@ _mocr = None
 def get_ocr():
     global _mocr
     if _mocr is None:
-        try:  # use the OS trust store so the first model download works behind HTTPS interception
-            import truststore
+        with LOAD_LOCK:  # see model_lock.py: first-time imports must not race with other loaders
+            if _mocr is None:
+                try:  # use the OS trust store so the first model download works behind HTTPS interception
+                    import truststore
 
-            truststore.inject_into_ssl()
-        except ImportError:
-            pass
-        from manga_ocr import MangaOcr
+                    truststore.inject_into_ssl()
+                except ImportError:
+                    pass
+                from manga_ocr import MangaOcr
 
-        _mocr = MangaOcr()
+                _mocr = MangaOcr()
     return _mocr
 
 

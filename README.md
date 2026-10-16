@@ -11,6 +11,7 @@ React + Vite  --HTTP-->  FastAPI
                           |- waifu2x-ncnn-vulkan         optional 2x upscaling (any Vulkan GPU)
                           |- SudachiPy (full dict)       tokens, readings, conjugation
                           |- JMdict (SQLite)             definitions, ranked by part of speech
+                          |- opus-mt-ja-en               rough sentence translation (on demand)
 ```
 
 ## Setup
@@ -37,7 +38,8 @@ One-time data downloads (kept out of git, under `data/`):
    [jmdict-simplified](https://github.com/scriptin/jmdict-simplified/releases) (the full file, not
    "common"), unzip it, then build the SQLite file:
    `.venv\Scripts\python -m app.dict.import_jmdict path\to\jmdict-eng-3.x.json`
-3. The manga-ocr model (~400 MB) downloads from Hugging Face the first time the server starts.
+3. The manga-ocr model (~400 MB) and the translation model (`Helsinki-NLP/opus-mt-ja-en`, ~300 MB)
+   download from Hugging Face the first time the server starts.
 
 Optional: copy `backend/.env.example` to `backend/.env` and set `WAIFU2X_EXE` to a
 [waifu2x-ncnn-vulkan](https://github.com/nihui/waifu2x-ncnn-vulkan/releases) executable to upscale

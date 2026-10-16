@@ -51,6 +51,9 @@ def warm_up() -> None:
 
             get_session()
             get_ocr()
+            from ..nlp.translate import warm_up as warm_translator
+
+            warm_translator()
         except Exception:  # noqa: BLE001 - a missing model is reported when a page is analysed
             log.exception("model warm-up failed")
 

@@ -120,3 +120,20 @@ export async function deleteChapter(id: number) {
   const res = await fetch(`/api/chapters/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(res.statusText)
 }
+
+export interface Translation {
+  translation: string
+  model: string
+  cached: boolean
+}
+
+/** Rough local machine translation of one block (cached server-side; the first call loads the model). */
+export const translateBlock = (blockId: number) =>
+  fetch(`/api/blocks/${blockId}/translate`, { method: 'POST' }).then(json<Translation>)
+
+/** UI state of a block's translation request. */
+export type TranslationState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'done'; text: string }
+  | { status: 'error'; message: string }

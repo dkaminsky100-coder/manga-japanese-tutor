@@ -4,6 +4,7 @@ anthropic==1.15.0
 anyio==4.15.1
 certifi==2026.7.22
 click==8.5.0
+cloudpickle==3.1.2
 colorama==0.4.6
 docstring_parser==0.18.0
 fastapi==0.143.3
@@ -25,6 +26,7 @@ iniconfig==2.3.1
 jaconv==0.5.0
 Jinja2==3.1.6
 jiter==0.17.0
+joblib==1.6.0
 loguru==0.7.3
 manga-ocr==0.1.16
 markdown-it-py==4.2.0
@@ -52,7 +54,9 @@ python-multipart==0.0.32
 PyYAML==6.0.3
 regex==2026.9.29
 rich==15.0.0
+sacremoses==0.2.0
 safetensors==0.8.0
+sentencepiece==0.2.2
 setuptools==78.1.0
 shapely==2.2.0
 shellingham==1.5.4

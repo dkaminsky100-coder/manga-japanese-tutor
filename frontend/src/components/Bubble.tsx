@@ -12,7 +12,7 @@ import {
   useInteractions,
   type OpenChangeReason,
 } from '@floating-ui/react'
-import type { TextBlock } from '../api/client'
+import { translateBlock, type TextBlock, type TranslationState } from '../api/client'
 import type { PercentRect } from '../lib/coords'
 import BubbleTooltip from './BubbleTooltip'
 
@@ -31,6 +31,16 @@ export default function Bubble({ block, rect, label }: Props) {
   const [hoverOpen, setHoverOpen] = useState(false)
   const [pinned, setPinned] = useState(false)
   const open = hoverOpen || pinned
+  // Kept here, not in the tooltip, so a translation survives the tooltip closing and reopening.
+  const [translation, setTranslation] = useState<TranslationState>({ status: 'idle' })
+
+  function translate() {
+    if (translation.status === 'loading') return
+    setTranslation({ status: 'loading' })
+    translateBlock(block.id)
+      .then((r) => setTranslation({ status: 'done', text: r.translation }))
+      .catch((e) => setTranslation({ status: 'error', message: e instanceof Error ? e.message : 'Translation failed' }))
+  }
 
   const { refs, floatingStyles, context } = useFloating({
     open,
@@ -62,7 +72,7 @@ export default function Bubble({ block, rect, label }: Props) {
       {open && (
         <FloatingPortal>
           <div ref={refs.setFloating} style={floatingStyles} className="tooltip-wrap" {...getFloatingProps()}>
-            <BubbleTooltip block={block} pinned={pinned} />
+            <BubbleTooltip block={block} pinned={pinned} translation={translation} onTranslate={translate} />
           </div>
         </FloatingPortal>
       )}
