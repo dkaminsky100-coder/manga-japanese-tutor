@@ -19,7 +19,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Manga Reader", lifespan=lifespan)
+app = FastAPI(title="Manga Japanese Tutor", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

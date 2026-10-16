@@ -41,7 +41,7 @@ export default function Library() {
 
   return (
     <main className="library">
-      <h1>Manga Reader</h1>
+      <h1>Manga Japanese Tutor</h1>
       <form onSubmit={onUpload} className="upload">
         <input placeholder="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
         <input ref={fileInput} type="file" multiple accept="image/*,.cbz,.zip,.pdf" required />

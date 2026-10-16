@@ -1,4 +1,4 @@
-# Manga Reader
+# Manga Japanese Tutor
 
 A web manga reader for learning Japanese. Upload a chapter (images, `.cbz` or PDF); hovering a
 speech bubble shows its text with furigana, a word-by-word dictionary breakdown and common
