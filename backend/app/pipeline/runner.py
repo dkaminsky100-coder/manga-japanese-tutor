@@ -133,7 +133,19 @@ def get_analysis(page_id: int) -> dict:
                 "vertical": bool(b["vertical"]),
                 "conf": b["conf"],
                 "text": b["text"],
+                **_language_analysis(b["text"]),
             }
             for b in blocks
         ],
     }
+
+
+def _language_analysis(text: str) -> dict:
+    """Tokens (furigana, dictionary entries) and compounds for a block; empty if analysis fails."""
+    try:
+        from ..nlp.analyze import analyze_text
+
+        return analyze_text(text)
+    except Exception:  # noqa: BLE001 - a NLP failure must not hide the OCR text
+        log.exception("language analysis failed for %r", text)
+        return {"tokens": [], "compounds": []}

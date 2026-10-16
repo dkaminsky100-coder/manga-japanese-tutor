@@ -58,6 +58,8 @@ shapely==2.2.0
 shellingham==1.5.4
 sniffio==1.3.1
 starlette==1.8.0
+sudachidict-full==20261015
+SudachiPy==0.7.0
 sympy==1.14.0
 termcolor==3.3.0
 tokenizers==0.23.3

@@ -37,6 +37,53 @@ export const getChapter = (id: number) => fetch(`/api/chapters/${id}`).then(json
 
 export const pageImageUrl = (pageId: number) => `/api/pages/${pageId}/image`
 
+/** A piece of a word; `ruby` is the furigana to show above it (null for kana that needs none). */
+export interface RubySegment {
+  text: string
+  ruby: string | null
+}
+
+export interface DictSense {
+  pos: string[]
+  glosses: string[]
+  misc: string[]
+}
+
+export interface DictEntry {
+  id: number
+  common: boolean
+  kanji: string[]
+  kana: string[]
+  senses: DictSense[]
+  more_senses: number
+}
+
+export interface WordToken {
+  surface: string
+  /** hiragana */
+  reading: string
+  dictionary_form: string
+  /** Sudachi top-level POS, e.g. 動詞 */
+  pos: string
+  /** English label, e.g. "verb" */
+  pos_label: string
+  pos_detail: string
+  conj_type: string
+  conj_form: string
+  ruby: RubySegment[]
+  entries: DictEntry[]
+  /** Finer split of a compound word, when there is one */
+  parts: Omit<WordToken, 'entries' | 'parts'>[]
+}
+
+/** A multi-token dictionary phrase, e.g. 気 + を + つけろ -> 気をつける. start/end index into `tokens` (end exclusive). */
+export interface Compound {
+  start: number
+  end: number
+  text: string
+  entries: DictEntry[]
+}
+
 export interface TextBlock {
   id: number
   /** [x1, y1, x2, y2] in the page image's natural pixels */
@@ -44,6 +91,8 @@ export interface TextBlock {
   vertical: boolean
   conf: number
   text: string
+  tokens: WordToken[]
+  compounds: Compound[]
 }
 
 export interface PageAnalysis {

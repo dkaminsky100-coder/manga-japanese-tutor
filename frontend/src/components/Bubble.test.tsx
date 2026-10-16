@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import Bubble from './Bubble'
 
-const block = { id: 1, bbox: [10, 20, 40, 90] as [number, number, number, number], vertical: true, conf: 0.9, text: 'こんにちは' }
+const block = { id: 1, bbox: [10, 20, 40, 90] as [number, number, number, number], vertical: true, conf: 0.9, text: 'こんにちは', tokens: [], compounds: [] }
 const rect = { left: 10, top: 10, width: 20, height: 20 }
 
 function setup() {

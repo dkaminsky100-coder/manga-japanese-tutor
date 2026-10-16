@@ -21,7 +21,24 @@ body { margin: 0; }
 .block-label { position: absolute; top: -1.1em; left: 0; font-size: .75rem; color: #e22; font-weight: bold; }
 .block-list { max-width: 40rem; padding: 0 1rem 2rem 2.5rem; }
 .tooltip-wrap { z-index: 1000; }
-.tooltip { max-width: min(24rem, calc(100vw - 1rem)); max-height: 60vh; overflow-y: auto; padding: .6rem .8rem; border-radius: 8px;
+.tooltip { width: max-content; max-width: min(26rem, calc(100vw - 1rem)); max-height: 70vh; overflow-y: auto; padding: .6rem .8rem; border-radius: 8px;
   background: Canvas; color: CanvasText; border: 1px solid #8886; box-shadow: 0 6px 24px #0005; font-size: 1.05rem; line-height: 1.5; }
 .tooltip-text { margin: 0; font-size: 1.2rem; }
 .tooltip-hint { margin: .4rem 0 0; font-size: .7rem; color: #888; }
+.tooltip-text { line-height: 2; }
+.tooltip rt { font-size: .55em; }
+.tooltip h4 { margin: .6rem 0 .2rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: #888; }
+.words { list-style: none; margin: .5rem 0 0; padding: 0; font-size: .9rem; }
+.word { padding: .4rem 0; border-top: 1px solid #8883; }
+.word-head { display: flex; flex-wrap: wrap; gap: .1rem .5rem; align-items: baseline; }
+.word-surface { font-size: 1.15rem; line-height: 1.9; }
+.pos-tag, .inflection, .base-form { font-size: .72rem; color: #888; }
+.pos-tag { border: 1px solid #8886; border-radius: 4px; padding: 0 .3rem; }
+.entry-head { font-size: .9rem; }
+.badge { margin-left: .4rem; font-size: .65rem; color: #2a7; border: 1px solid #2a76; border-radius: 4px; padding: 0 .25rem; }
+.senses { margin: .1rem 0 .2rem; padding-left: 1.2rem; }
+.senses .pos { color: #888; font-size: .75rem; }
+.senses .more, .no-entry { color: #888; font-size: .75rem; }
+.other-entries { font-size: .8rem; margin-top: .2rem; }
+.other-entries summary { cursor: pointer; color: #888; }
+.phrases .phrase { margin-bottom: .3rem; }
