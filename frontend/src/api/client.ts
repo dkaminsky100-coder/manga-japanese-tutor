@@ -37,6 +37,27 @@ export const getChapter = (id: number) => fetch(`/api/chapters/${id}`).then(json
 
 export const pageImageUrl = (pageId: number) => `/api/pages/${pageId}/image`
 
+export interface TextBlock {
+  id: number
+  /** [x1, y1, x2, y2] in the page image's natural pixels */
+  bbox: [number, number, number, number]
+  vertical: boolean
+  conf: number
+  text: string
+}
+
+export interface PageAnalysis {
+  status: 'none' | 'pending' | 'running' | 'done' | 'error'
+  error: string | null
+  upscaled: boolean
+  detect_ms: number | null
+  ocr_ms: number | null
+  blocks: TextBlock[]
+}
+
+/** Starts analysis on first call (and prefetches the next pages); poll until status is done/error. */
+export const getAnalysis = (pageId: number) => fetch(`/api/pages/${pageId}/analysis`).then(json<PageAnalysis>)
+
 export function uploadChapter(title: string, files: File[]) {
   const form = new FormData()
   form.append('title', title)

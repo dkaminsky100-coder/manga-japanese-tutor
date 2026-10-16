@@ -9,5 +9,12 @@ body { margin: 0; }
 .error { color: #c33; }
 .reader header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .5rem 1rem; background: Canvas; border-bottom: 1px solid #8884; }
 .reader header span { display: flex; gap: .5rem; align-items: center; }
-.reader .page { display: flex; justify-content: center; }
-.reader .page img { max-width: 100%; max-height: calc(100vh - 3rem); width: auto; height: auto; object-fit: contain; }
+.page-view { display: flex; flex-direction: column; align-items: center; }
+.page-status { font-size: .8rem; color: #888; padding: .25rem; }
+/* The frame shrink-wraps the image, so %-positioned overlays always line up with it. */
+.page-frame { position: relative; display: inline-block; line-height: 0; }
+.page-frame img { display: block; max-width: 100%; max-height: calc(100vh - 5rem); width: auto; height: auto; user-select: none; }
+.block-box { position: absolute; box-sizing: border-box; }
+.block-box.debug { border: 2px solid #e22; background: #e222; }
+.block-label { position: absolute; top: -1.1em; left: 0; font-size: .75rem; color: #e22; font-weight: bold; }
+.block-list { max-width: 40rem; padding: 0 1rem 2rem 2.5rem; }

@@ -21,6 +21,24 @@ CREATE TABLE IF NOT EXISTS pages (
     height INTEGER NOT NULL,
     UNIQUE (chapter_id, idx)
 );
+CREATE TABLE IF NOT EXISTS page_analysis (
+    page_id INTEGER PRIMARY KEY REFERENCES pages(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,            -- pending | running | done | error
+    error TEXT,
+    detect_ms INTEGER,
+    ocr_ms INTEGER,
+    upscaled INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page_id INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+    idx INTEGER NOT NULL,
+    x1 INTEGER NOT NULL, y1 INTEGER NOT NULL, x2 INTEGER NOT NULL, y2 INTEGER NOT NULL,
+    vertical INTEGER NOT NULL,
+    conf REAL NOT NULL,
+    text TEXT NOT NULL,
+    UNIQUE (page_id, idx)
+);
 """
 
 

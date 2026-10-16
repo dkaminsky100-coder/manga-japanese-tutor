@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getChapter, pageImageUrl, type Chapter } from '../api/client'
+import { getChapter, type Chapter } from '../api/client'
+import PageView from '../components/PageView'
 
 export default function Reader() {
   const id = Number(useParams().chapterId)
   const [chapter, setChapter] = useState<Chapter | null>(null)
   const [index, setIndex] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [showBoxes, setShowBoxes] = useState(false)
 
   useEffect(() => {
     getChapter(id).then(setChapter).catch((e) => setError(e.message))
@@ -36,14 +38,13 @@ export default function Reader() {
         <Link to="/">← Library</Link>
         <strong>{chapter.title}</strong>
         <span>
+          <label><input type="checkbox" checked={showBoxes} onChange={(e) => setShowBoxes(e.target.checked)} /> Boxes</label>
           <button onClick={next} disabled={index >= last}>◀ Next</button>
           {index + 1} / {chapter.pages.length}
           <button onClick={prev} disabled={index === 0}>Prev ▶</button>
         </span>
       </header>
-      <div className="page">
-        <img key={page.id} src={pageImageUrl(page.id)} width={page.width} height={page.height} alt={`Page ${index + 1}`} />
-      </div>
+      <PageView key={page.id} page={page} showBoxes={showBoxes} />
     </div>
   )
 }
