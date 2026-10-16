@@ -1,6 +1,6 @@
 # License
 
-Copyright (c) 2026 dkaminsky100-coder. All rights reserved.
+Copyright (c) 2026 David Kaminsky (dkaminsky100-coder). All rights reserved.
 
 ## What you may do
 
