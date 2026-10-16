@@ -6,6 +6,7 @@ import {
   offset,
   safePolygon,
   shift,
+  size,
   useDismiss,
   useFloating,
   useHover,
@@ -14,6 +15,7 @@ import {
 } from '@floating-ui/react'
 import { translateBlock, type TextBlock, type TranslationState } from '../api/client'
 import type { PercentRect } from '../lib/coords'
+import { fitToAvailable, VIEWPORT_PADDING } from '../lib/layout'
 import BubbleTooltip from './BubbleTooltip'
 
 interface Props {
@@ -51,7 +53,19 @@ export default function Bubble({ block, rect, label }: Props) {
       if (!next && (reason === 'escape-key' || reason === 'outside-press')) setPinned(false)
     },
     placement: 'bottom',
-    middleware: [offset(8), flip({ padding: 8 }), shift({ padding: 8 })],
+    middleware: [
+      offset(8),
+      // Pick the side (above/below) with more room when neither fits the whole tooltip...
+      flip({ padding: VIEWPORT_PADDING, fallbackStrategy: 'bestFit' }),
+      // ...then cap its size to that room; the tooltip scrolls inside instead of being cut off.
+      size({
+        padding: VIEWPORT_PADDING,
+        apply({ availableWidth, availableHeight, elements }) {
+          Object.assign(elements.floating.style, fitToAvailable(availableWidth, availableHeight))
+        },
+      }),
+      shift({ padding: VIEWPORT_PADDING }),
+    ],
     whileElementsMounted: autoUpdate,
   })
 
