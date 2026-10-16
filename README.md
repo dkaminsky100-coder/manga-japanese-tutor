@@ -75,4 +75,9 @@ cd backend  && .venv\Scripts\python -m pytest
 cd frontend && npx vitest run
 ```
 
-JMdict is (c) the Electronic Dictionary Research and Development Group, used under CC BY-SA 4.0.
+## License
+
+All rights reserved. You may download and use the software unmodified, but not modify or redistribute
+it; see [LICENSE.md](LICENSE.md). The models and dictionaries it downloads are not part of this
+repository and keep their own licenses (listed in LICENSE.md). JMdict is (c) the Electronic Dictionary
+Research and Development Group, used under CC BY-SA 4.0.
