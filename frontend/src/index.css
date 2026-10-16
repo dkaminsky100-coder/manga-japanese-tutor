@@ -49,3 +49,11 @@ body { margin: 0; }
 .translation { margin: .3rem 0 .1rem; padding: .35rem .5rem; border-left: 3px solid #38f; background: #38f1; }
 .translation-text { margin: 0; font-size: 1rem; }
 .translation-note { margin: .2rem 0 0; font-size: .68rem; color: #888; }
+.grammar .unit { margin: .3rem 0 .5rem; padding: .35rem .5rem; border-left: 3px solid #a5f; background: #a5f1; }
+.unit-head { display: flex; flex-wrap: wrap; gap: .1rem .6rem; align-items: baseline; }
+.unit-text { font-size: 1.1rem; line-height: 1.9; }
+.unit-summary { font-weight: 600; font-size: .85rem; }
+.steps { margin: .15rem 0 0; padding-left: 1.1rem; font-size: .8rem; }
+.step-text { font-size: .95rem; }
+.step-note { color: #888; }
+.particle-note { margin: .1rem 0 .2rem; font-size: .8rem; font-style: italic; color: #888; }

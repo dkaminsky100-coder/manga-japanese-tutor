@@ -11,6 +11,7 @@ React + Vite  --HTTP-->  FastAPI
                           |- waifu2x-ncnn-vulkan         optional 2x upscaling (any Vulkan GPU)
                           |- SudachiPy (full dict)       tokens, readings, conjugation
                           |- JMdict (SQLite)             definitions, ranked by part of speech
+                          |- grammar rules               verb/adjective chains (causative -> passive -> past), particle notes
                           |- opus-mt-ja-en               rough sentence translation (on demand)
 ```
 

@@ -151,4 +151,4 @@ def _language_analysis(text: str) -> dict:
         return analyze_text(text)
     except Exception:  # noqa: BLE001 - a NLP failure must not hide the OCR text
         log.exception("language analysis failed for %r", text)
-        return {"tokens": [], "compounds": []}
+        return {"tokens": [], "compounds": [], "grammar": []}

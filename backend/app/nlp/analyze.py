@@ -5,6 +5,7 @@ from functools import lru_cache
 
 from ..dict.lookup import lookup
 from .furigana import ruby_segments
+from .grammar import conj_label, find_units, particle_kind, particle_note, verb_class
 from .tokenize import Token, tokenize
 
 MAX_COMPOUND_TOKENS = 4
@@ -57,6 +58,10 @@ def _token_json(t: Token, with_entries: bool = True) -> dict:
         "pos_detail": t.pos_detail,
         "conj_type": t.conj_type,
         "conj_form": t.conj_form,
+        "conj_label": conj_label(t),
+        "verb_class": verb_class(t),
+        "particle_kind": particle_kind(t),
+        "note": particle_note(t),
         "ruby": [{"text": text, "ruby": ruby} for text, ruby in ruby_segments(t.surface, t.reading)],
     }
     if with_entries:
@@ -68,4 +73,8 @@ def _token_json(t: Token, with_entries: bool = True) -> dict:
 @lru_cache(maxsize=512)
 def analyze_text(text: str) -> dict:
     tokens = tokenize(text)
-    return {"tokens": [_token_json(t) for t in tokens], "compounds": _find_compounds(tokens)}
+    return {
+        "tokens": [_token_json(t) for t in tokens],
+        "compounds": _find_compounds(tokens),
+        "grammar": find_units(tokens),
+    }

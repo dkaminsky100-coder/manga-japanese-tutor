@@ -1,4 +1,4 @@
-import type { Compound, DictEntry, TextBlock, TranslationState, WordToken } from '../api/client'
+import type { Compound, DictEntry, GrammarUnit, TextBlock, TranslationState, WordToken } from '../api/client'
 import Ruby from './Ruby'
 
 const MAX_SENSES_SHOWN = 3
@@ -58,25 +58,26 @@ function Entries({ entries }: { entries: DictEntry[] }) {
 }
 
 function Word({ token }: { token: WordToken }) {
-  const inflection = token.conj_form || token.conj_type
   return (
     <li className="word">
       <div className="word-head">
         <span className="word-surface" lang="ja">
           <Ruby segments={token.ruby} />
         </span>
-        <span className="pos-tag">{token.pos_label}</span>
+        <span className="pos-tag">{token.particle_kind || token.pos_label}</span>
+        {token.verb_class && <span className="pos-tag">{token.verb_class}</span>}
         {token.dictionary_form !== token.surface && (
           <span className="base-form" lang="ja">
             ← {token.dictionary_form}
           </span>
         )}
-        {inflection && (
-          <span className="inflection" lang="ja">
-            {inflection}
+        {token.conj_label && (
+          <span className="inflection" title={token.conj_form}>
+            {token.conj_label}
           </span>
         )}
       </div>
+      {token.note && <p className="particle-note">{token.note}</p>}
       {token.entries.length > 0 ? (
         <Entries entries={token.entries} />
       ) : (
@@ -94,6 +95,39 @@ function Phrases({ compounds }: { compounds: Compound[] }) {
       {compounds.map((c) => (
         <div key={`${c.start}-${c.end}`} className="phrase">
           <Entries entries={c.entries} />
+        </div>
+      ))}
+    </section>
+  )
+}
+
+/** Predicate chains: a verb / adjective with its auxiliaries, explained step by step. */
+function Grammar({ units, tokens }: { units: GrammarUnit[]; tokens: WordToken[] }) {
+  if (units.length === 0) return null
+  return (
+    <section className="grammar">
+      <h4>Grammar</h4>
+      {units.map((u) => (
+        <div key={`${u.start}-${u.end}`} className="unit">
+          <div className="unit-head">
+            <span className="unit-text" lang="ja">
+              {tokens.slice(u.start, u.end).map((t, i) => (
+                <Ruby key={i} segments={t.ruby} />
+              ))}
+            </span>
+            <span className="unit-summary">{u.summary}</span>
+          </div>
+          <ol className="steps">
+            {u.steps.map((st, i) => (
+              <li key={i}>
+                <span className="step-text" lang="ja">
+                  {st.text}
+                </span>{' '}
+                <strong>{st.label}</strong>
+                {st.note && <span className="step-note"> — {st.note}</span>}
+              </li>
+            ))}
+          </ol>
         </div>
       ))}
     </section>
@@ -147,6 +181,7 @@ export default function BubbleTooltip({ block, pinned, translation, onTranslate 
           : block.text}
       </p>
       <Translate state={translation} onTranslate={onTranslate} />
+      <Grammar units={block.grammar} tokens={block.tokens} />
       <Phrases compounds={block.compounds} />
       {words.length > 0 && (
         <ul className="words">

@@ -10,20 +10,22 @@ const entry = (id: number, kanji: string[], kana: string[], glosses: string[], p
 
 const taberu: WordToken = {
   surface: '食べ', reading: 'たべ', dictionary_form: '食べる', pos: '動詞', pos_label: 'verb', pos_detail: '一般',
-  conj_type: '下一段-バ行', conj_form: '連用形-一般',
+  conj_type: '下一段-バ行', conj_form: '連用形-一般', conj_label: 'continuative stem (before ます / た / て)',
+  verb_class: 'ichidan verb', particle_kind: '', note: '',
   ruby: [{ text: '食', ruby: 'た' }, { text: 'べ', ruby: null }],
   entries: [entry(1, ['食べる'], ['たべる'], ['to eat']), entry(2, ['喰べる'], ['たべる'], ['to eat (variant)'])],
   parts: [],
 }
 const bang: WordToken = {
   surface: '！', reading: '！', dictionary_form: '!', pos: '補助記号', pos_label: 'symbol', pos_detail: '句点',
-  conj_type: '', conj_form: '', ruby: [{ text: '！', ruby: null }], entries: [], parts: [],
+  conj_type: '', conj_form: '', conj_label: '', verb_class: '', particle_kind: '', note: '',
+  ruby: [{ text: '！', ruby: null }], entries: [], parts: [],
 }
-const unknown: WordToken = { ...taberu, surface: 'キョロ', pos_label: 'noun', dictionary_form: 'キョロ', conj_form: '',
+const unknown: WordToken = { ...taberu, surface: 'キョロ', pos_label: 'noun', dictionary_form: 'キョロ', conj_form: '', conj_label: '', verb_class: '',
   ruby: [{ text: 'キョロ', ruby: null }], entries: [] }
 
-const block = (tokens: WordToken[], compounds: TextBlock['compounds'] = []): TextBlock => ({
-  id: 1, bbox: [0, 0, 1, 1], vertical: true, conf: 1, text: tokens.map((t) => t.surface).join(''), tokens, compounds,
+const block = (tokens: WordToken[], compounds: TextBlock['compounds'] = [], grammar: TextBlock['grammar'] = []): TextBlock => ({
+  id: 1, bbox: [0, 0, 1, 1], vertical: true, conf: 1, text: tokens.map((t) => t.surface).join(''), tokens, compounds, grammar,
 })
 
 const idle: TranslationState = { status: 'idle' }
@@ -44,7 +46,8 @@ describe('BubbleTooltip', () => {
     const word = container.querySelector('li.word') as HTMLElement
     expect(within(word).getByText('verb')).toBeTruthy()
     expect(within(word).getByText('← 食べる')).toBeTruthy()
-    expect(within(word).getByText('連用形-一般')).toBeTruthy()
+    expect(within(word).getByText('continuative stem (before ます / た / て)')).toBeTruthy()
+    expect(within(word).getByText('ichidan verb')).toBeTruthy()
     expect(within(word).getByText(/to eat$/)).toBeTruthy()
   })
 
@@ -78,5 +81,38 @@ describe('BubbleTooltip', () => {
     render(<BubbleTooltip block={b} pinned translation={idle} onTranslate={() => {}} />)
     expect(screen.getByText('こんにちは')).toBeTruthy()
     expect(screen.getByText(/Pinned/)).toBeTruthy()
+  })
+
+  it('explains a predicate chain step by step in the Grammar section', () => {
+    const ta: WordToken = { ...taberu, surface: 'た', dictionary_form: 'た', pos: '助動詞', pos_label: 'auxiliary verb',
+      conj_label: '', verb_class: '', ruby: [{ text: 'た', ruby: null }], entries: [] }
+    const unit = {
+      start: 0, end: 2, text: '食べた', base: '食べる', summary: 'past',
+      steps: [
+        { text: '食べ', label: '食べる — continuative stem', note: '' },
+        { text: 'た', label: 'past', note: 'past or completed (〜た)' },
+      ],
+    }
+    const { container } = render(<BubbleTooltip block={block([taberu, ta], [], [unit])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    const g = container.querySelector('section.grammar') as HTMLElement
+    expect(within(g).getByText('Grammar')).toBeTruthy()
+    expect(g.querySelector('.unit-summary')!.textContent).toBe('past')
+    expect(g.querySelectorAll('.steps li')).toHaveLength(2)
+    expect(within(g).getByText(/past or completed/)).toBeTruthy()
+    expect(g.querySelector('.unit-text rt')!.textContent).toBe('た') // furigana carried into the unit
+  })
+
+  it('omits the Grammar section when there are no chains', () => {
+    const { container } = render(<BubbleTooltip block={block([taberu])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    expect(container.querySelector('section.grammar')).toBeNull()
+  })
+
+  it("shows a particle's kind and plain-English note", () => {
+    const wa: WordToken = { ...taberu, surface: 'は', dictionary_form: 'は', pos: '助詞', pos_label: 'particle', conj_label: '',
+      verb_class: '', particle_kind: 'topic / focus particle', note: 'marks the topic of the sentence',
+      ruby: [{ text: 'は', ruby: null }], entries: [] }
+    render(<BubbleTooltip block={block([wa])} pinned={false} translation={idle} onTranslate={() => {}} />)
+    expect(screen.getByText('topic / focus particle')).toBeTruthy()
+    expect(screen.getByText('marks the topic of the sentence')).toBeTruthy()
   })
 })

@@ -70,6 +70,14 @@ export interface WordToken {
   pos_detail: string
   conj_type: string
   conj_form: string
+  /** English description of the conjugated form, e.g. "continuative stem" ('' if none) */
+  conj_label: string
+  /** "godan verb" / "ichidan verb" / ... for verbs, else '' */
+  verb_class: string
+  /** e.g. "case particle" for particles, else '' */
+  particle_kind: string
+  /** plain-English note for particles, else '' */
+  note: string
   ruby: RubySegment[]
   entries: DictEntry[]
   /** Finer split of a compound word, when there is one */
@@ -84,6 +92,24 @@ export interface Compound {
   entries: DictEntry[]
 }
 
+/** One element of a predicate chain: the head word, or an attached auxiliary / particle. */
+export interface GrammarStep {
+  text: string
+  label: string
+  note: string
+}
+
+/** A verb / adjective / copula plus what is attached to it, e.g. 食べさせられた = causative → passive → past. */
+export interface GrammarUnit {
+  /** index range into the block's `tokens` (end exclusive) */
+  start: number
+  end: number
+  text: string
+  base: string
+  summary: string
+  steps: GrammarStep[]
+}
+
 export interface TextBlock {
   id: number
   /** [x1, y1, x2, y2] in the page image's natural pixels */
@@ -93,6 +119,7 @@ export interface TextBlock {
   text: string
   tokens: WordToken[]
   compounds: Compound[]
+  grammar: GrammarUnit[]
 }
 
 export interface PageAnalysis {
