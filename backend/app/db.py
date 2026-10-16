@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS page_analysis (
     error TEXT,
     detect_ms INTEGER,
     ocr_ms INTEGER,
-    upscaled INTEGER NOT NULL DEFAULT 0
+    upscaled INTEGER NOT NULL DEFAULT 0,
+    version INTEGER NOT NULL DEFAULT 0   -- pipeline version that produced the blocks
 );
 CREATE TABLE IF NOT EXISTS blocks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,6 +52,10 @@ def init_db() -> None:
     LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
     with connect() as conn:
         conn.executescript(SCHEMA)
+        # Databases created before the version column existed.
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(page_analysis)")}
+        if "version" not in cols:
+            conn.execute("ALTER TABLE page_analysis ADD COLUMN version INTEGER NOT NULL DEFAULT 0")
 
 
 @contextmanager

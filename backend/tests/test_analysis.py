@@ -84,3 +84,26 @@ def test_decode_blocks_scales_and_nms():
     b = blocks[0]
     assert (b.x1, b.y1, b.x2, b.y2) == (160, 120, 240, 280)
     assert b.vertical
+
+
+def test_pages_analysed_by_an_older_pipeline_are_read_again(client, monkeypatch):
+    from app import db
+
+    reads = []
+    monkeypatch.setattr(runner, "detect_blocks", lambda img: [TextBlock(1, 1, 20, 40, True, 0.9)])
+    monkeypatch.setattr(runner, "read_block", lambda rgb, b: reads.append(1) or f"text{len(reads)}")
+    pages = upload(client, 1)
+    pid = pages[0]["id"]
+
+    first = wait_done(client, pid)
+    assert first["blocks"][0]["text"] == "text1" and len(reads) == 1
+    assert client.get(f"/api/pages/{pid}/analysis").json()["status"] == "done"  # current version: left alone
+    assert len(reads) == 1
+
+    with db.connect() as conn:  # pretend an older pipeline produced it
+        conn.execute("UPDATE page_analysis SET version = 0 WHERE page_id = ?", (pid,))
+    assert client.get(f"/api/pages/{pid}/analysis").json()["status"] in ("pending", "running", "done")
+    again = wait_done(client, pid)
+    assert again["blocks"][0]["text"] == "text2" and len(reads) == 2
+    with db.connect() as conn:
+        assert conn.execute("SELECT version FROM page_analysis WHERE page_id = ?", (pid,)).fetchone()[0] == runner.PIPELINE_VERSION

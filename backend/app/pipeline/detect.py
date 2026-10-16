@@ -17,6 +17,7 @@ from ..db import DATA_DIR
 
 MODEL_PATH = DATA_DIR / "models" / "comictextdetector.pt.onnx"
 INPUT_SIZE = 1024
+HORIZONTAL_ASPECT = 1.6  # width/height above which a block is treated as horizontal text
 
 _session: ort.InferenceSession | None = None
 
@@ -87,7 +88,10 @@ def decode_blocks(
         x2, y2 = min(img_w, int(round(x + bw))), min(img_h, int(round(y + bh)))
         if x2 - x1 < 4 or y2 - y1 < 4:
             continue
-        blocks.append(TextBlock(x1, y1, x2, y2, vertical=(y2 - y1) > (x2 - x1), conf=float(conf[i])))
+        # Manga text is vertical unless the block is clearly wide; a squarish block of several
+        # columns (3 short columns of a stuttering line) must not be mistaken for horizontal text.
+        vertical = (x2 - x1) <= HORIZONTAL_ASPECT * (y2 - y1)
+        blocks.append(TextBlock(x1, y1, x2, y2, vertical=vertical, conf=float(conf[i])))
     return reading_order(blocks)
 
 
@@ -98,10 +102,14 @@ def reading_order(blocks: list[TextBlock]) -> list[TextBlock]:
     return sorted(blocks, key=lambda b: (-b.x2, b.y1))
 
 
+def _model_input(img_bgr: np.ndarray) -> tuple[np.ndarray, float]:
+    canvas, scale = letterbox(img_bgr)
+    return canvas[:, :, ::-1].transpose(2, 0, 1)[None].astype(np.float32) / 255.0, scale
+
+
 def detect_blocks(img_bgr: np.ndarray, conf_thresh: float = 0.4) -> list[TextBlock]:
     h, w = img_bgr.shape[:2]
-    canvas, scale = letterbox(img_bgr)
-    x = canvas[:, :, ::-1].transpose(2, 0, 1)[None].astype(np.float32) / 255.0
+    x, scale = _model_input(img_bgr)
     sess = get_session()
     blk = sess.run(["blk"], {sess.get_inputs()[0].name: x})[0][0]
     return decode_blocks(blk, scale, w, h, conf_thresh)

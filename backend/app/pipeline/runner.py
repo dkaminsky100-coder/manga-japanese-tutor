@@ -1,4 +1,8 @@
-"""Per-page analysis job: (optional upscale) -> detect -> OCR -> store blocks.
+"""Per-page analysis job: detect text blocks -> OCR the original page -> store blocks.
+
+Detection runs on the original page and, when an upscaler is configured, on an upscaled copy too
+(the passes find different blocks). OCR always reads crops of the *original* page: on the answer
+key, reading upscaled crops made more mistakes (the upscaler's smoothing confuses similar kana).
 
 Jobs run on a single worker thread: the models are CPU-bound and not thread-safe, and
 one worker keeps results arriving in the order pages were requested.
@@ -13,9 +17,13 @@ import cv2
 import numpy as np
 
 from .. import db
-from .detect import detect_blocks
+from .blocks import drop_containers, merge_detections, scale_block
+from .detect import TextBlock, detect_blocks, reading_order
 from .ocr import read_block
 from .upscale import ensure_upscaled
+
+# Bump when a pipeline change should re-read pages that were already analysed.
+PIPELINE_VERSION = 2
 
 log = logging.getLogger(__name__)
 _pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="analysis")
@@ -31,8 +39,13 @@ def _read_image(path) -> np.ndarray:
 def enqueue(page_id: int) -> str:
     """Queue a page for analysis unless it already has a row. Returns its current status."""
     with db.connect() as conn:
-        row = conn.execute("SELECT status FROM page_analysis WHERE page_id = ?", (page_id,)).fetchone()
+        row = conn.execute("SELECT status, version FROM page_analysis WHERE page_id = ?", (page_id,)).fetchone()
         if row:
+            if row["status"] in ("done", "error") and row["version"] < PIPELINE_VERSION:
+                # analysed by an older pipeline: read it again (old blocks stay visible meanwhile)
+                conn.execute("UPDATE page_analysis SET status='pending' WHERE page_id = ?", (page_id,))
+                _pool.submit(_run, page_id)
+                return "pending"
             return row["status"]
         if not conn.execute("SELECT 1 FROM pages WHERE id = ?", (page_id,)).fetchone():
             raise LookupError(page_id)
@@ -73,6 +86,22 @@ def requeue_unfinished() -> None:
         _pool.submit(_run, pid)
 
 
+def detect_page(orig_bgr: np.ndarray, up_bgr: np.ndarray | None = None) -> list[TextBlock]:
+    """Text blocks of a page in the original image's pixel coordinates, in reading order."""
+    blocks = detect_blocks(orig_bgr)
+    if up_bgr is not None:
+        k = orig_bgr.shape[1] / up_bgr.shape[1]
+        blocks = merge_detections(blocks, [scale_block(b, k) for b in detect_blocks(up_bgr)])
+    return reading_order(drop_containers(blocks))
+
+
+def read_page(orig_bgr: np.ndarray, up_bgr: np.ndarray | None = None) -> list[tuple[TextBlock, str]]:
+    """Detect and OCR a whole page: [(block, text)] in reading order."""
+    blocks = detect_page(orig_bgr, up_bgr)
+    rgb = orig_bgr[:, :, ::-1].copy()
+    return [(b, read_block(rgb, b)) for b in blocks]
+
+
 def _run(page_id: int) -> None:
     try:
         with db.connect() as conn:
@@ -81,18 +110,14 @@ def _run(page_id: int) -> None:
         if row is None:  # chapter deleted while queued
             return
         path = db.LIBRARY_DIR / str(row["chapter_id"]) / row["filename"]
-        up = ensure_upscaled(path)
-        img = _read_image(up or path)
-        # Boxes are stored in the *original* page's pixel space so the frontend can map
-        # them onto the displayed image regardless of upscaling.
-        scale = 1.0
-        if up is not None:
-            scale = _read_image(path).shape[1] / img.shape[1]
+        orig = _read_image(path)
+        up_path = ensure_upscaled(path)
+        up = _read_image(up_path) if up_path is not None else None
 
         t0 = time.perf_counter()
-        blocks = detect_blocks(img)
+        blocks = detect_page(orig, up)
         t1 = time.perf_counter()
-        rgb = img[:, :, ::-1].copy()
+        rgb = orig[:, :, ::-1].copy()
         texts = [read_block(rgb, b) for b in blocks]
         t2 = time.perf_counter()
 
@@ -103,12 +128,11 @@ def _run(page_id: int) -> None:
                     continue
                 conn.execute(
                     "INSERT INTO blocks (page_id, idx, x1, y1, x2, y2, vertical, conf, text) VALUES (?,?,?,?,?,?,?,?,?)",
-                    (page_id, i, round(b.x1 * scale), round(b.y1 * scale), round(b.x2 * scale),
-                     round(b.y2 * scale), int(b.vertical), b.conf, text),
+                    (page_id, i, b.x1, b.y1, b.x2, b.y2, int(b.vertical), b.conf, text),
                 )
             conn.execute(
-                "UPDATE page_analysis SET status='done', error=NULL, detect_ms=?, ocr_ms=?, upscaled=? WHERE page_id=?",
-                (round((t1 - t0) * 1000), round((t2 - t1) * 1000), int(up is not None), page_id),
+                "UPDATE page_analysis SET status='done', error=NULL, detect_ms=?, ocr_ms=?, upscaled=?, version=? WHERE page_id=?",
+                (round((t1 - t0) * 1000), round((t2 - t1) * 1000), int(up is not None), PIPELINE_VERSION, page_id),
             )
     except Exception as e:  # noqa: BLE001 - record any failure so the UI can show it
         log.exception("analysis failed for page %s", page_id)

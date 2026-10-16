@@ -8,7 +8,7 @@ phrases. Everything runs locally.
 React + Vite  --HTTP-->  FastAPI
                           |- comic-text-detector (ONNX)  finds speech bubbles
                           |- manga-ocr                   reads vertical/horizontal text
-                          |- waifu2x-ncnn-vulkan         optional 2x upscaling (any Vulkan GPU)
+                          |- waifu2x-ncnn-vulkan         optional 2x upscaled copy, used as a second detection pass
                           |- SudachiPy (full dict)       tokens, readings, conjugation
                           |- JMdict (SQLite)             definitions, ranked by part of speech
                           |- grammar rules               verb/adjective chains (causative -> passive -> past), particle notes
@@ -43,8 +43,9 @@ One-time data downloads (kept out of git, under `data/`):
    download from Hugging Face the first time the server starts.
 
 Optional: copy `backend/.env.example` to `backend/.env` and set `WAIFU2X_EXE` to a
-[waifu2x-ncnn-vulkan](https://github.com/nihui/waifu2x-ncnn-vulkan/releases) executable to upscale
-low-resolution scans before OCR (a modest accuracy gain on 600-700 px pages).
+[waifu2x-ncnn-vulkan](https://github.com/nihui/waifu2x-ncnn-vulkan/releases) executable. Each page is then
+also detected on a 2x upscaled copy, which finds blocks the original misses; the OCR itself always
+reads the original pixels (on the test pages, reading upscaled crops was less accurate).
 
 ```
 # frontend
